@@ -10,7 +10,8 @@ training_set_vs_tumor/
 
 # Ambiente virtual
 .venv/
-
+__pycache__/
+*.pyc
 
 #docs
 .env
