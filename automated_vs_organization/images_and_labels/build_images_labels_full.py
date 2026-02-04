@@ -1,0 +1,184 @@
+from pathlib import Path
+import os
+import json
+import re
+import numpy as np
+import pydicom
+from pydicom.pixels import apply_voi_lut
+import cv2
+from tqdm import tqdm
+from dotenv import load_dotenv
+
+load_dotenv()
+
+DICOM_SOURCE = Path(os.getenv("DICOM_SOURCE"))
+CONTOURS_SOURCE = Path(os.getenv("CONTOURS_SOURCE"))
+BASE_DIR = Path(os.getenv("BASE_DIR"))
+
+#Names used to identify tumor structures in contour files, can add more if needed
+TUMOR_STRUCTURE_NAMES = {
+    "tv",
+    "tumor",
+    "tumour",
+    "schwannoma",
+    "vs",
+    "vestibular schwannoma",
+}
+
+def is_tumor_structure(name: str) -> bool:
+    name = name.lower()
+    return any(k in name for k in TUMOR_STRUCTURE_NAMES)
+
+TOL_MM = 0.8
+
+
+def load_dicom_uint8(ds):
+    arr = ds.pixel_array
+    try:
+        arr = apply_voi_lut(arr, ds)
+    except Exception:
+        pass
+
+    arr = arr.astype(np.float32)
+    if getattr(ds, "PhotometricInterpretation", "") == "MONOCHROME1":
+        arr = arr.max() - arr
+
+    lo, hi = np.percentile(arr, (0.5, 99.5))
+    arr = np.clip((arr - lo) / max(1e-6, hi - lo), 0, 1)
+    return (arr * 255).astype(np.uint8)
+
+
+def lps_to_pixels(lps_points, ds):
+    img_pos = np.array(ds.ImagePositionPatient, float)
+    orient = np.array(ds.ImageOrientationPatient, float)
+    row_dir, col_dir = orient[:3], orient[3:]
+    row_sp, col_sp = map(float, ds.PixelSpacing)
+
+    pts = []
+    for p in lps_points:
+        v = np.array(p) - img_pos
+        r = int(round(np.dot(v, row_dir) / row_sp))
+        c = int(round(np.dot(v, col_dir) / col_sp))
+        if 0 <= r < ds.Rows and 0 <= c < ds.Columns:
+            pts.append([c, r])
+
+    return np.array(pts, np.int32) if len(pts) >= 3 else None
+
+
+def slice_position(ds):
+    orient = np.array(ds.ImageOrientationPatient, float)
+    normal = np.cross(orient[:3], orient[3:])
+    return float(np.dot(normal, ds.ImagePositionPatient)), normal
+
+
+def point_position(p, normal):
+    return float(np.dot(normal, p))
+
+
+def pick_slice(ds_list, poly):
+    _, normal = slice_position(ds_list[0])
+    target = point_position(poly[0], normal)
+
+    best, delta = None, None
+    for ds in ds_list:
+        s, _ = slice_position(ds)
+        d = abs(s - target)
+        if best is None or d < delta:
+            best, delta = ds, d
+
+    return best if best is not None and delta <= TOL_MM else None
+
+
+def load_tumor_polys(json_path):
+    if not json_path.exists():
+        return []
+
+    data = json.loads(json_path.read_text())
+    polys = []
+    for s in data:
+        if is_tumor_structure(s.get("structure_name", "")):
+            polys.extend(s.get("LPS_contour_points", []))
+    return polys
+
+
+def main():
+    (BASE_DIR / "images").mkdir(parents=True, exist_ok=True)
+    (BASE_DIR / "labels").mkdir(parents=True, exist_ok=True)
+
+    patients = sorted(
+        p for p in DICOM_SOURCE.iterdir()
+        if p.is_dir() and re.match(r"VS-SEG-\d{3}", p.name)
+    )
+
+    for pdir in tqdm(patients, desc="Generating full dataset"):
+        pid = pdir.name
+
+        t1_dir = pdir / "t1"
+        if not t1_dir.exists():
+            continue
+
+        contour_json = CONTOURS_SOURCE / pid / "t1_contours.json"
+        tumor_polys = load_tumor_polys(contour_json)
+
+        ds_list = []
+        for dcm in sorted(t1_dir.iterdir()):
+            if dcm.suffix.lower() != ".dcm":
+                continue
+            try:
+                ds = pydicom.dcmread(dcm, force=True)
+                if all(k in ds for k in ("ImagePositionPatient","ImageOrientationPatient","PixelSpacing")):
+                    ds.filename = str(dcm)
+                    ds_list.append(ds)
+            except Exception:
+                pass
+
+        if not ds_list:
+            continue
+
+        poly_to_slice = {}
+        for poly in tumor_polys:
+            ds = pick_slice(ds_list, poly)
+            if ds:
+                poly_to_slice.setdefault(ds.filename, []).append(poly)
+
+        out_img = BASE_DIR / "images" / pid
+        out_lbl = BASE_DIR / "labels" / pid
+        out_img.mkdir(parents=True, exist_ok=True)
+        out_lbl.mkdir(parents=True, exist_ok=True)
+
+        for ds in ds_list:
+            img = load_dicom_uint8(ds)
+            stem = Path(ds.filename).stem
+
+            img_path = out_img / f"{stem}.png"
+            lbl_path = out_lbl / f"{stem}.txt"
+
+            cv2.imwrite(str(img_path), img)
+
+            h, w = img.shape
+            lines = []
+
+            for poly in poly_to_slice.get(ds.filename, []):
+                pts = lps_to_pixels(poly, ds)
+                if pts is None:
+                    continue
+
+                x, y, ww, hh = cv2.boundingRect(pts)
+                xc, yc = (x + ww/2)/w, (y + hh/2)/h
+                wn, hn = ww/w, hh/h
+                poly_n = (pts / np.array([w, h])).flatten()
+
+                lines.append(
+                    "0 {:.6f} {:.6f} {:.6f} {:.6f} {}".format(
+                        xc, yc, wn, hn,
+                        " ".join(f"{v:.6f}" for v in poly_n)
+                    )
+                )
+
+            lbl_path.write_text("\n".join(lines) + ("\n" if lines else ""))
+
+    print("Full dataset (images + labels) generated.")
+
+
+if __name__ == "__main__":
+    main()

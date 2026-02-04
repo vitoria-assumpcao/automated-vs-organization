@@ -1,0 +1,25 @@
+[project]
+name = "automated-vs-organization"
+version = "0.1.0"
+description = "Automated organization pipeline for vestibular schwannoma in MRI"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+
+authors = [
+    { name = "Vitória Assumpção", email = "vitoria-assumpcao@outlook.com" }
+]
+
+dependencies = [
+    "pydicom>=3.0.1,<4.0.0",
+    "opencv-python>=4.9,<5.0",
+    "tqdm>=4.67,<5.0",
+    "numpy>=1.24,<3.0",
+    "python-dotenv (>=1.2.1,<2.0.0)"
+]
+
+[tool.poetry]
+packages = [{ include = "automated_vs_organization" }]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,16 @@
+
+# Ignore data directories
+source_data/
+organized_data/
+base_vs_tumor_only/
+dataset_vs_tumor/
+training_set_vs_tumor/
+
+
+
+# Ambiente virtual
+.venv/
+
+
+#docs
+.env
