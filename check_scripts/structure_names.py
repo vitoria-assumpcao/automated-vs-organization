@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-CONTOURS_ORIGIN_FOLDER = Path(os.getenv("CONTOURS_SOURCE"))
+CONTOURS_SOURCE = Path(os.getenv("CONTOURS_ORIGIN_FOLDER"))
 
 
 def list_all_structure_names():
@@ -15,7 +15,7 @@ def list_all_structure_names():
     total_files = 0
 
     # Iterate over all vs_gk_* folders (t1 and t2)
-    for folder in sorted(CONTOURS_ORIGIN_FOLDER.iterdir()):
+    for folder in sorted(CONTOURS_SOURCE.iterdir()):
         if not folder.is_dir():
             continue
 
