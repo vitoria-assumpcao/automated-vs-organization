@@ -4,6 +4,7 @@ source_data/
 organized_data/
 base_vs_tumor_only/
 dataset_vs_tumor/
+dataset_vs_tumor_test/
 training_set_vs_tumor/
 
 

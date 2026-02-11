@@ -86,8 +86,8 @@ def lps_to_pixels(lps_points, ds: pydicom.Dataset):
     for pt in lps_points:
         p = np.array(pt, dtype=float)
         v = p - img_pos
-        row_idx = np.dot(v, row_dir) / row_sp
-        col_idx = np.dot(v, col_dir) / col_sp
+        row_idx = np.dot(v, col_dir) / col_sp
+        col_idx = np.dot(v, row_dir) / row_sp
 
         r = int(round(row_idx))
         c = int(round(col_idx))

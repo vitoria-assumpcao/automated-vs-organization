@@ -90,9 +90,6 @@ def main():
 
                 if lbl.is_file():
                     gather_file(lbl, dst_lbl)
-                else:
-                    dst_lbl.parent.mkdir(parents=True, exist_ok=True)
-                    dst_lbl.write_text("")
 
                 if msk_dir.is_dir():
                     msk = msk_dir / f"{stem}.png"
