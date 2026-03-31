@@ -90,6 +90,8 @@ def main():
 
                 if lbl.is_file():
                     gather_file(lbl, dst_lbl)
+                else:
+                    print(f"[WARN] Missing label for image: {img}")
 
                 if msk_dir.is_dir():
                     msk = msk_dir / f"{stem}.png"

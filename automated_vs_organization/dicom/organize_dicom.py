@@ -32,7 +32,7 @@ def is_probable_dicom(p: Path) -> bool:
                 if f.read(4) == b"DICM":
                     return True
         except Exception:
-            return True  
+            return False
         return True
     if ext in {".xml", ".json", ".txt", ".csv", ".zip", ".gz"}:
         return False

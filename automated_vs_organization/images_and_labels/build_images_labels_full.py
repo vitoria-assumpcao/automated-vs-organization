@@ -44,6 +44,8 @@ def load_dicom_uint8(ds):
         arr = arr.max() - arr
 
     lo, hi = np.percentile(arr, (0.5, 99.5))
+    if hi <= lo:
+        lo, hi = float(arr.min()), float(arr.max())
     arr = np.clip((arr - lo) / max(1e-6, hi - lo), 0, 1)
     return (arr * 255).astype(np.uint8)
 
@@ -57,8 +59,8 @@ def lps_to_pixels(lps_points, ds):
     pts = []
     for p in lps_points:
         v = np.array(p) - img_pos
-        r = int(round(np.dot(v, row_dir) / row_sp))
-        c = int(round(np.dot(v, col_dir) / col_sp))
+        r = int(round(np.dot(v, col_dir) / col_sp))
+        c = int(round(np.dot(v, row_dir) / row_sp))
         if 0 <= r < ds.Rows and 0 <= c < ds.Columns:
             pts.append([c, r])
 

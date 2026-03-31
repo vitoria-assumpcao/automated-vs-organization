@@ -69,7 +69,7 @@ def organize_contours():
             )
 
     print("\n== DONE ==")
-    print(f"T1 contour files copied: {copied_files}")
+    print(f"Contour files copied: {copied_files}")
     print(f"Output folder          : {CONTOURS_SOURCE}")
 
 if __name__ == "__main__":

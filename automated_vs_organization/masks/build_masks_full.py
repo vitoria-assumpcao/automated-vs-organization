@@ -45,8 +45,8 @@ def lps_to_pixels(poly_lps, ds: pydicom.Dataset):
     pts = []
     for p in poly_lps:
         v = np.array(p, dtype=float) - img_pos
-        r = int(round(np.dot(v, row_dir) / row_sp))
-        c = int(round(np.dot(v, col_dir) / col_sp))
+        r = int(round(np.dot(v, col_dir) / col_sp))
+        c = int(round(np.dot(v, row_dir) / row_sp))
         if 0 <= r < ds.Rows and 0 <= c < ds.Columns:
             pts.append([c, r]) 
 
@@ -110,7 +110,7 @@ def main():
 
     patients = sorted(
         p for p in DICOM_SOURCE.iterdir()
-        if p.is_dir() and re.match(r"VS-SEG-\d{3}", p.name)
+        if p.is_dir() and re.match(r"^VS-SEG-\d{3}$", p.name)
     )
 
     for pdir in tqdm(patients, desc="Generating full masks"):
