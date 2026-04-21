@@ -1,4 +1,3 @@
-# build_dataset.py
 from pathlib import Path
 import os
 import json
@@ -10,14 +9,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BASE_DIR = Path(os.getenv("BASE_DIR"))          
-DATASET_DIR = Path(os.getenv("DATASET_DIR"))   
+BASE_DIR = Path(os.getenv("BASE_DIR"))
+DATASET_DIR = Path(os.getenv("DATASET_DIR"))
 
 SPLIT_SEED = 42
 TRAIN_FRAC = 0.70
 VAL_FRAC = 0.15
 
-USE_HARDLINKS = False  
+USE_HARDLINKS = False
 
 
 def gather_file(src: Path, dst: Path):
@@ -39,7 +38,8 @@ def gather_file(src: Path, dst: Path):
 
 def main():
     img_root = BASE_DIR / "images"
-    lbl_root = BASE_DIR / "labels"
+    lbl_seg_root = BASE_DIR / "labels"
+    lbl_det_root = BASE_DIR / "labels_detect"
     msk_root = BASE_DIR / "masks"
 
     patients = sorted(
@@ -76,7 +76,8 @@ def main():
 
         for pid in pids:
             img_dir = img_root / pid
-            lbl_dir = lbl_root / pid
+            lbl_seg_dir = lbl_seg_root / pid
+            lbl_det_dir = lbl_det_root / pid
             msk_dir = msk_root / pid
 
             for img in sorted(img_dir.glob("*.png")):
@@ -85,13 +86,15 @@ def main():
                 dst_img = DATASET_DIR / split / "images" / f"{pid}_{img.name}"
                 gather_file(img, dst_img)
 
-                lbl = lbl_dir / f"{stem}.txt"
-                dst_lbl = DATASET_DIR / split / "labels" / f"{pid}_{stem}.txt"
+                lbl_seg = lbl_seg_dir / f"{stem}.txt"
+                dst_lbl_seg = DATASET_DIR / split / "labels" / f"{pid}_{stem}.txt"
+                if lbl_seg.is_file():
+                    gather_file(lbl_seg, dst_lbl_seg)
 
-                if lbl.is_file():
-                    gather_file(lbl, dst_lbl)
-                else:
-                    print(f"[WARN] Missing label for image: {img}")
+                lbl_det = lbl_det_dir / f"{stem}.txt"
+                dst_lbl_det = DATASET_DIR / split / "labels_detect" / f"{pid}_{stem}.txt"
+                if lbl_det.is_file():
+                    gather_file(lbl_det, dst_lbl_det)
 
                 if msk_dir.is_dir():
                     msk = msk_dir / f"{stem}.png"

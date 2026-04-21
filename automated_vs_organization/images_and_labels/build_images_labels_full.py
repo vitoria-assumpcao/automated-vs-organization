@@ -106,10 +106,11 @@ def load_tumor_polys(json_path):
 def main():
     (BASE_DIR / "images").mkdir(parents=True, exist_ok=True)
     (BASE_DIR / "labels").mkdir(parents=True, exist_ok=True)
+    (BASE_DIR / "labels_detect").mkdir(parents=True, exist_ok=True)
 
     patients = sorted(
         p for p in DICOM_SOURCE.iterdir()
-        if p.is_dir() and re.match(r"VS-SEG-\d{3}", p.name)
+        if p.is_dir() and re.match(r"^VS-SEG-\d{3}$", p.name)
     )
 
     for pdir in tqdm(patients, desc="Generating full dataset"):
@@ -128,7 +129,7 @@ def main():
                 continue
             try:
                 ds = pydicom.dcmread(dcm, force=True)
-                if all(k in ds for k in ("ImagePositionPatient","ImageOrientationPatient","PixelSpacing")):
+                if all(k in ds for k in ("ImagePositionPatient", "ImageOrientationPatient", "PixelSpacing")):
                     ds.filename = str(dcm)
                     ds_list.append(ds)
             except Exception:
@@ -144,21 +145,25 @@ def main():
                 poly_to_slice.setdefault(ds.filename, []).append(poly)
 
         out_img = BASE_DIR / "images" / pid
-        out_lbl = BASE_DIR / "labels" / pid
+        out_lbl_seg = BASE_DIR / "labels" / pid
+        out_lbl_det = BASE_DIR / "labels_detect" / pid
         out_img.mkdir(parents=True, exist_ok=True)
-        out_lbl.mkdir(parents=True, exist_ok=True)
+        out_lbl_seg.mkdir(parents=True, exist_ok=True)
+        out_lbl_det.mkdir(parents=True, exist_ok=True)
 
         for ds in ds_list:
             img = load_dicom_uint8(ds)
             stem = Path(ds.filename).stem
 
             img_path = out_img / f"{stem}.png"
-            lbl_path = out_lbl / f"{stem}.txt"
+            seg_path = out_lbl_seg / f"{stem}.txt"
+            det_path = out_lbl_det / f"{stem}.txt"
 
             cv2.imwrite(str(img_path), img)
 
             h, w = img.shape
-            lines = []
+            seg_lines = []
+            det_lines = []
 
             for poly in poly_to_slice.get(ds.filename, []):
                 pts = lps_to_pixels(poly, ds)
@@ -166,20 +171,26 @@ def main():
                     continue
 
                 x, y, ww, hh = cv2.boundingRect(pts)
-                xc, yc = (x + ww/2)/w, (y + hh/2)/h
-                wn, hn = ww/w, hh/h
+                xc, yc = (x + ww / 2) / w, (y + hh / 2) / h
+                wn, hn = ww / w, hh / h
                 poly_n = (pts / np.array([w, h])).flatten()
 
-                lines.append(
-                    "0 {:.6f} {:.6f} {:.6f} {:.6f} {}".format(
-                        xc, yc, wn, hn,
-                        " ".join(f"{v:.6f}" for v in poly_n)
-                    )
+                # Segmentation format: class x1 y1 x2 y2 ...
+                seg_lines.append(
+                    "0 {}".format(" ".join(f"{v:.6f}" for v in poly_n))
                 )
 
-            lbl_path.write_text("\n".join(lines) + ("\n" if lines else ""))
+                # Detection format: class xc yc w h
+                det_lines.append(
+                    "0 {:.6f} {:.6f} {:.6f} {:.6f}".format(xc, yc, wn, hn)
+                )
+
+            seg_path.write_text("\n".join(seg_lines) + ("\n" if seg_lines else ""))
+            det_path.write_text("\n".join(det_lines) + ("\n" if det_lines else ""))
 
     print("Full dataset (images + labels) generated.")
+    print(f"  Segmentation labels : {BASE_DIR / 'labels'}")
+    print(f"  Detection labels    : {BASE_DIR / 'labels_detect'}")
 
 
 if __name__ == "__main__":

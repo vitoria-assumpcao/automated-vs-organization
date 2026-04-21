@@ -78,7 +78,7 @@ def lps_to_pixels(lps_points, ds: pydicom.Dataset):
     img_pos = np.array(ds.ImagePositionPatient, dtype=float)
     img_orient = np.array(ds.ImageOrientationPatient, dtype=float)
     row_dir, col_dir = img_orient[:3], img_orient[3:]
-    row_sp, col_sp = map(float, ds.PixelSpacing)  
+    row_sp, col_sp = map(float, ds.PixelSpacing)
 
     h, w = int(ds.Rows), int(ds.Columns)
     pts = []
@@ -179,6 +179,7 @@ def main():
     BASE_DIR.mkdir(parents=True, exist_ok=True)
     (BASE_DIR / "images").mkdir(parents=True, exist_ok=True)
     (BASE_DIR / "labels").mkdir(parents=True, exist_ok=True)
+    (BASE_DIR / "labels_detect").mkdir(parents=True, exist_ok=True)
 
     patients = sorted([
         p for p in DICOM_SOURCE.iterdir()
@@ -222,9 +223,11 @@ def main():
             continue
 
         out_img_dir = BASE_DIR / "images" / patient_id
-        out_lbl_dir = BASE_DIR / "labels" / patient_id
+        out_lbl_seg = BASE_DIR / "labels" / patient_id
+        out_lbl_det = BASE_DIR / "labels_detect" / patient_id
         out_img_dir.mkdir(parents=True, exist_ok=True)
-        out_lbl_dir.mkdir(parents=True, exist_ok=True)
+        out_lbl_seg.mkdir(parents=True, exist_ok=True)
+        out_lbl_det.mkdir(parents=True, exist_ok=True)
 
         for poly_lps in tumor_slices:
             if not (isinstance(poly_lps, list) and len(poly_lps) >= 3):
@@ -244,7 +247,8 @@ def main():
 
             dcm_stem = Path(ds_best.filename).stem
             img_out = out_img_dir / f"{dcm_stem}.png"
-            lbl_out = out_lbl_dir / f"{dcm_stem}.txt"
+            seg_out = out_lbl_seg / f"{dcm_stem}.txt"
+            det_out = out_lbl_det / f"{dcm_stem}.txt"
 
             if not img_out.exists():
                 cv2.imwrite(str(img_out), img)
@@ -260,22 +264,31 @@ def main():
 
             poly = (pts_px.astype(np.float32) / np.array([w, h])).flatten()
 
-            line = "0 {:.6f} {:.6f} {:.6f} {:.6f} {}".format(
-                x_c, y_c, w_n, h_n,
-                " ".join(f"{v:.6f}" for v in poly)
-            )
+            # Segmentation format: class x1 y1 x2 y2 ...
+            seg_line = "0 {}".format(" ".join(f"{v:.6f}" for v in poly))
 
-            if lbl_out.exists() and lbl_out.read_text().strip():
-                lbl_out.write_text(lbl_out.read_text().rstrip() + "\n" + line + "\n")
+            # Detection format: class xc yc w h
+            det_line = "0 {:.6f} {:.6f} {:.6f} {:.6f}".format(x_c, y_c, w_n, h_n)
+
+            # Write segmentation label
+            if seg_out.exists() and seg_out.read_text().strip():
+                seg_out.write_text(seg_out.read_text().rstrip() + "\n" + seg_line + "\n")
             else:
-                lbl_out.write_text(line + "\n")
+                seg_out.write_text(seg_line + "\n")
+
+            # Write detection label
+            if det_out.exists() and det_out.read_text().strip():
+                det_out.write_text(det_out.read_text().rstrip() + "\n" + det_line + "\n")
+            else:
+                det_out.write_text(det_line + "\n")
                 total_label_files += 1
 
-    print("\n Pre-split completed.")
+    print("\nPre-split completed.")
     print(f"PNG images generated ...............: {total_png}")
     print(f"Label files created ...............: {total_label_files}")
-    print(f"Images directory : {BASE_DIR / 'images'}")
-    print(f"Labels directory : {BASE_DIR / 'labels'}")
+    print(f"Images directory         : {BASE_DIR / 'images'}")
+    print(f"Segmentation labels      : {BASE_DIR / 'labels'}")
+    print(f"Detection labels         : {BASE_DIR / 'labels_detect'}")
 
 
 if __name__ == "__main__":

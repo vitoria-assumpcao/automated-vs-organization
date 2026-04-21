@@ -5,6 +5,7 @@ dataset_vs_tumor/
 training_set_vs_tumor/
 dataset_vs_full/
 training_set_vs_full/
+validation_patients/
 
 
 
