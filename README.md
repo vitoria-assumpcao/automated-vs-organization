@@ -10,7 +10,7 @@ This repository provides a fully automated workflow for converting, organizing, 
 This project automates the preprocessing of medical images for vestibular schwannoma segmentation.
 Raw DICOM images and expert contour annotations are standardized into structured datasets suitable for training segmentation models (e.g., U-Net, YOLO-based pipelines, or hybrid detection–segmentation approaches).
 
-## 📊 Data Source
+## Data Source
 
 The MRI data used in this project come from the **Vestibular Schwannoma SEG (VS-SEG)**
 dataset, publicly available through **The Cancer Imaging Archive (TCIA)**.
@@ -32,7 +32,7 @@ for data exploration and analysis.
 
 ---
 
-## ⚙️ Environment setup
+## Environment setup
 
 ### Install dependencies 
 This project uses Poetry for dependency management.
@@ -44,7 +44,7 @@ This command installs all required libraries and creates the virtual environment
 
 ---
 
-## 📂 Dataset Preparation Workflow
+## Dataset Preparation Workflow
 
 ### Step 1 — Organize source data
 
@@ -124,7 +124,7 @@ This script helps identify naming variations in the original annotations and sup
 
 ---
 
-## 🧾 Citation
+## Citation
 
 - The Cancer Imaging Archive (TCIA): Vestibular Schwannoma-SEG Dataset
 
@@ -132,7 +132,7 @@ This script helps identify naming variations in the original annotations and sup
 
 ---
 
-## 👩‍💻 Author
+## Author
 
 **Vitória Assumpção**
 Biomedical Informatics – UFCSPA

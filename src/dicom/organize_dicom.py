@@ -19,24 +19,19 @@ def is_probable_dicom(p: Path) -> bool:
     """
     Heuristic function to identify whether a file is likely a DICOM file.
     Criteria:
-    - File extension is '.dcm' or empty
-    - Optional check for the 'DICM' signature at byte offset 128
+    - File extension is '.dcm'
+    - 'DICM' signature present at byte offset 128
     """
     if not p.is_file():
         return False
-    ext = p.suffix.lower()
-    if ext == ".dcm" or ext == "":
-        try:
-            with p.open("rb") as f:
-                f.seek(128)
-                if f.read(4) == b"DICM":
-                    return True
-        except Exception:
-            return False
-        return True
-    if ext in {".xml", ".json", ".txt", ".csv", ".zip", ".gz"}:
+    if p.suffix.lower() != ".dcm":
         return False
-    return False
+    try:
+        with p.open("rb") as f:
+            f.seek(128)
+            return f.read(4) == b"DICM"
+    except Exception:
+        return False
 
 def organize_dicom():
     """

@@ -163,6 +163,8 @@ def main():
         out_dir = BASE_DIR / "masks" / patient_id
         out_dir.mkdir(parents=True, exist_ok=True)
 
+        ds_by_filename = {ds.filename: ds for ds in ds_list}
+        poly_map = {}
         for poly_lps in tumor_slices:
             if not (isinstance(poly_lps, list) and len(poly_lps) >= 3):
                 continue
@@ -171,12 +173,16 @@ def main():
             if ds_best is None:
                 continue
 
-            pts = lps_to_pixels(poly_lps, ds_best)
-            if pts is None:
-                continue
+            poly_map.setdefault(ds_best.filename, []).append(poly_lps)
 
+        for ds_filename, polys in poly_map.items():
+            ds_best = ds_by_filename[ds_filename]
             mask = np.zeros((ds_best.Rows, ds_best.Columns), np.uint8)
-            cv2.fillPoly(mask, [pts], 255)
+
+            for poly_lps in polys:
+                pts = lps_to_pixels(poly_lps, ds_best)
+                if pts is not None:
+                    cv2.fillPoly(mask, [pts], 255)
 
             stem = Path(ds_best.filename).stem
             cv2.imwrite(str(out_dir / f"{stem}.png"), mask)

@@ -134,6 +134,36 @@ files = [
 cli = ["click (>=5.0)"]
 
 [[package]]
+name = "simpleitk"
+version = "2.5.6"
+description = "SimpleITK is a simplified interface to the Insight Toolkit (ITK) for image registration and segmentation"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "simpleitk-2.5.6-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:58d010734206efc322da6c0feff0a66e9ea183fbaff7c0ef42c0cab9f4492657"},
+    {file = "simpleitk-2.5.6-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:e4ba60dd948bd9db6adba7a654601e757b2a28013877afb108da1abc6654661e"},
+    {file = "simpleitk-2.5.6-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:b27be32b6a4993a5b6dfcde11280ab962e3df01445c89cd931b69679e18a0cdb"},
+    {file = "simpleitk-2.5.6-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:ce740fcd9a89d70f8183dc2ee752d342d75ff629626020c01857d86aed696f51"},
+    {file = "simpleitk-2.5.6-cp310-cp310-win_amd64.whl", hash = "sha256:39cdecac58e50c976d1344328f0757b84d4600bdd4c969c63c0d8f0abfae3bf0"},
+    {file = "simpleitk-2.5.6-cp311-abi3-macosx_10_9_x86_64.whl", hash = "sha256:36658792fe2a62814cbfedb3b236ac722ca7e00953241726bc4a3a26cc7ef5a7"},
+    {file = "simpleitk-2.5.6-cp311-abi3-macosx_11_0_arm64.whl", hash = "sha256:afcda49474748548fa1b7dbb9f557c3b9feafeb0dd3c2e05d771cc935c86646e"},
+    {file = "simpleitk-2.5.6-cp311-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:af7ca101b23233745b813481ea91694ecea95c3e3b6eed8dca37be39a60f6894"},
+    {file = "simpleitk-2.5.6-cp311-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:99242c333ed17138134e9749f3a484518f41baebab0fc0f0fe7c657ab8090c07"},
+    {file = "simpleitk-2.5.6-cp311-abi3-win_amd64.whl", hash = "sha256:0002b298efb31332f99587cf26ed9f42c2c3ec006a0570f492dfc9ea27303d73"},
+    {file = "simpleitk-2.5.6-cp314-cp314t-macosx_10_9_x86_64.whl", hash = "sha256:a455eb6ae0ab4ed8d50d3a2762b5e3c7e17a8ee331dc40f468ce416ba4c0840d"},
+    {file = "simpleitk-2.5.6-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:454d0fd8c9323e8246c8c7b8fd9c142b211080968359684acd0f0c48b7f55d49"},
+    {file = "simpleitk-2.5.6-cp314-cp314t-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:22b825c609fe5ca114c8acc149a26a94a01bd62e8c9e685f362d5f880e237269"},
+    {file = "simpleitk-2.5.6-cp314-cp314t-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:baf0d5731b8918efce8084e5e28e403aab116e1081b77822123bb55e0841e5e7"},
+    {file = "simpleitk-2.5.6-cp314-cp314t-win_amd64.whl", hash = "sha256:5e731a91cd1376e5a4533395cf2b1ae9fb2a8fa1fbf7f396ab49d3223fc464fd"},
+    {file = "simpleitk-2.5.6-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:8da14e678262e537372660ee89d604b752dd358fb7dfb279316fd2e6789f6478"},
+    {file = "simpleitk-2.5.6-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:fd3d21be01a3a5bfff76fe018d183b4adb64880f2ceed4a4505c42f1907fcbbb"},
+    {file = "simpleitk-2.5.6-cp39-cp39-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:698904c85cb9b8152a8b117465c9d047a5b4efb622ed2d064ce75f8c3052b8f9"},
+    {file = "simpleitk-2.5.6-cp39-cp39-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:660b5436cf545c4fde76e10e71bdd373edc522c5f7035f2166dc134f0530cd31"},
+    {file = "simpleitk-2.5.6-cp39-cp39-win_amd64.whl", hash = "sha256:f6d98d81f12281cb796a6427f295645de284bcc6b5e2e1958fffea88529ce835"},
+]
+
+[[package]]
 name = "tqdm"
 version = "4.67.1"
 description = "Fast, Extensible Progress Meter"
@@ -158,4 +188,4 @@ telegram = ["requests"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.13"
-content-hash = "052a4564bf038dad72ed60cfc3cdafbeb1b252e517d6ea24111ea7f7d775f95f"
+content-hash = "94710378857f7b0a604c43f4ef9830a8a03dfc43503376aa092124e2a81175cd"
