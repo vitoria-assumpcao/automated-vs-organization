@@ -3,6 +3,8 @@ from collections import defaultdict
 import os
 from dotenv import load_dotenv
 
+from src.config import PATIENT_ID_PREFIX
+
 load_dotenv()
 
 BASE_DIR = Path(os.getenv("BASE_DIR"))
@@ -15,7 +17,7 @@ MIN_POINTS = 3
 
 def count_files_in_subdirs(root: Path):
     total = 0
-    for sub in root.glob("VS-SEG-*"):
+    for sub in root.glob(f"{PATIENT_ID_PREFIX}*"):
         if sub.is_dir():
             total += len(list(sub.glob("*.*")))
     return total
@@ -122,7 +124,7 @@ def main():
 
     patients = sorted(
         p for p in lbls_root.iterdir()
-        if p.is_dir() and p.name.startswith("VS-SEG-")
+        if p.is_dir() and p.name.startswith(PATIENT_ID_PREFIX)
     )
 
     for patient_dir in patients:

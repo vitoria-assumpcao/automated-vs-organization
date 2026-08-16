@@ -4,8 +4,9 @@ import json
 import math
 import random
 import shutil
-import re
 from dotenv import load_dotenv
+
+from src.config import PATIENT_ID_REGEX
 
 load_dotenv()
 
@@ -44,7 +45,7 @@ def main():
 
     patients = sorted(
         p.name for p in img_root.iterdir()
-        if p.is_dir() and re.match(r"^VS-SEG-\d{3}$", p.name)
+        if p.is_dir() and PATIENT_ID_REGEX.match(p.name)
     )
 
     if not patients:

@@ -1,7 +1,6 @@
 from pathlib import Path
 import os
 import json
-import re
 import numpy as np
 import pydicom
 from pydicom.pixels import apply_voi_lut
@@ -9,21 +8,14 @@ import cv2
 from tqdm import tqdm
 from dotenv import load_dotenv
 
+from src.config import CONTOUR_POINTS_KEY, MODALITY, PATIENT_ID_REGEX, STRUCTURE_NAME_KEY, TUMOR_STRUCTURE_NAMES, contour_json_filename
+
 load_dotenv()
 
 
 DICOM_SOURCE = Path(os.getenv("DICOM_SOURCE"))
 CONTOURS_SOURCE = Path(os.getenv("CONTOURS_SOURCE"))
 BASE_DIR = Path(os.getenv("BASE_DIR"))
-
-#Names used to identify tumor structures in contour files, can add more if needed
-TUMOR_STRUCTURE_NAMES = {
-    "tv",
-    "tumor",
-    "tumour",
-    "schwannoma",
-    "vs",
-    "vestibular schwannoma"}
 
 def is_tumor_structure(name: str) -> bool:
     name = name.lower()
@@ -111,9 +103,9 @@ def has_tumor(contour_path: Path) -> bool:
     try:
         data = json.loads(contour_path.read_text())
         for s in data:
-            if (is_tumor_structure(s.get("structure_name", "")) and
-                s.get("LPS_contour_points")):
-                return len(s["LPS_contour_points"]) > 0
+            if (is_tumor_structure(s.get(STRUCTURE_NAME_KEY, "")) and
+                s.get(CONTOUR_POINTS_KEY)):
+                return len(s[CONTOUR_POINTS_KEY]) > 0
     except Exception:
         pass
 
@@ -128,8 +120,8 @@ def load_tumor_slices(contour_path: Path):
     data = json.loads(contour_path.read_text())
     tumor_polys = []
     for s in data:
-        if is_tumor_structure(s.get("structure_name", "")):
-            tumor_polys.extend(s.get("LPS_contour_points", []))
+        if is_tumor_structure(s.get(STRUCTURE_NAME_KEY, "")):
+            tumor_polys.extend(s.get(CONTOUR_POINTS_KEY, []))
     return tumor_polys if tumor_polys else None
 
 
@@ -183,7 +175,7 @@ def main():
 
     patients = sorted([
         p for p in DICOM_SOURCE.iterdir()
-        if p.is_dir() and re.match(r"^VS-SEG-\d{3}$", p.name)
+        if p.is_dir() and PATIENT_ID_REGEX.match(p.name)
     ])
 
     print(f"Patients found in DICOM directory: {len(patients)}")
@@ -192,7 +184,7 @@ def main():
 
     for pdir in tqdm(patients, desc="Processing patients"):
         patient_id = pdir.name
-        contour_json = CONTOURS_SOURCE / patient_id / "t1_contours.json"
+        contour_json = CONTOURS_SOURCE / patient_id / contour_json_filename()
 
         if not has_tumor(contour_json):
             continue
@@ -202,7 +194,7 @@ def main():
             continue
 
         ds_list = []
-        t1_dir = pdir / "t1"            #Imaging modality used for processing (e.g., "t1" or "t2")
+        t1_dir = pdir / MODALITY
         if not t1_dir.exists():
             continue
 

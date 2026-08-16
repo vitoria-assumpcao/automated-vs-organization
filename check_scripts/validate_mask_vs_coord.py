@@ -2,12 +2,13 @@ from pathlib import Path
 import os
 import json
 import random
-import re
 import numpy as np
 import pydicom
 import cv2
 from tqdm import tqdm
 from dotenv import load_dotenv
+
+from src.config import CONTOUR_POINTS_KEY, MODALITY, PATIENT_ID_REGEX, STRUCTURE_NAME_KEY, TUMOR_STRUCTURE_NAMES, contour_json_filename
 
 load_dotenv()
 
@@ -15,10 +16,6 @@ DICOM_SOURCE = Path(os.getenv("DICOM_SOURCE"))
 CONTOURS_SOURCE = Path(os.getenv("CONTOURS_SOURCE"))
 BASE_DIR = Path(os.getenv("BASE_DIR"))
 MASKS_DIR = BASE_DIR / "masks"
-
-TUMOR_STRUCTURE_NAMES = {
-    "tv", "tumor", "tumour", "schwannoma", "vs", "vestibular schwannoma",
-}
 
 TOL_MM = 0.8
 MAX_PATIENTS = None
@@ -39,8 +36,8 @@ def has_tumor(contour_json: Path) -> bool:
     try:
         data = json.loads(contour_json.read_text())
         for s in data:
-            if is_tumor_structure(s.get("structure_name", "")) and s.get("LPS_contour_points"):
-                return len(s["LPS_contour_points"]) > 0
+            if is_tumor_structure(s.get(STRUCTURE_NAME_KEY, "")) and s.get(CONTOUR_POINTS_KEY):
+                return len(s[CONTOUR_POINTS_KEY]) > 0
     except Exception:
         pass
     return False
@@ -50,8 +47,8 @@ def load_tumor_slices(contour_json: Path):
     data = json.loads(contour_json.read_text())
     tumor_polys = []
     for s in data:
-        if is_tumor_structure(s.get("structure_name", "")):
-            tumor_polys.extend(s.get("LPS_contour_points", []))
+        if is_tumor_structure(s.get(STRUCTURE_NAME_KEY, "")):
+            tumor_polys.extend(s.get(CONTOUR_POINTS_KEY, []))
     return tumor_polys if tumor_polys else None
 
 
@@ -114,13 +111,18 @@ def extract_mask_contour(mask_path: Path):
     return np.concatenate([c.reshape(-1, 2) for c in contours], axis=0)  # (x, y) pairs
 
 
-def nearest_neighbor_distances(pts_a, pts_b):
-    """Distance from each point in pts_a to its nearest neighbor in pts_b."""
-    pts_a = np.asarray(pts_a, dtype=float)
-    pts_b = np.asarray(pts_b, dtype=float)
+def nearest_neighbor_distances_mm(pts_a, pts_b, row_sp, col_sp):
+    """Distance (mm) from each point in pts_a to its nearest neighbor in
+    pts_b. Points are (x, y) = (row_dir-axis, col_dir-axis) pixel indices,
+    so x is scaled by row_sp and y by col_sp before pairing -- this keeps
+    both the nearest-neighbor match and the reported distance correct for
+    anisotropic pixel spacing, not just square pixels."""
+    scale = np.array([row_sp, col_sp], dtype=float)
+    pts_a_mm = np.asarray(pts_a, dtype=float) * scale
+    pts_b_mm = np.asarray(pts_b, dtype=float) * scale
     dists = []
-    for p in pts_a:
-        d = np.min(np.linalg.norm(pts_b - p, axis=1))
+    for p in pts_a_mm:
+        d = np.min(np.linalg.norm(pts_b_mm - p, axis=1))
         dists.append(d)
     return np.array(dists)
 
@@ -181,7 +183,7 @@ def main():
 
     patients = sorted([
         p for p in DICOM_SOURCE.iterdir()
-        if p.is_dir() and re.match(r"^VS-SEG-\d{3}$", p.name)
+        if p.is_dir() and PATIENT_ID_REGEX.match(p.name)
     ])
     random.shuffle(patients)  # no fixed seed: sample set varies on every run
     if MAX_PATIENTS:
@@ -196,7 +198,7 @@ def main():
 
     for pdir in tqdm(patients, desc="Comparing mask vs JSON coordinates"):
         patient_id = pdir.name
-        contour_json = CONTOURS_SOURCE / patient_id / "t1_contours.json"
+        contour_json = CONTOURS_SOURCE / patient_id / contour_json_filename()
 
         if not has_tumor(contour_json):
             continue
@@ -204,7 +206,7 @@ def main():
         if not tumor_slices:
             continue
 
-        t1_dir = pdir / "t1"
+        t1_dir = pdir / MODALITY
         if not t1_dir.exists():
             continue
 
@@ -250,11 +252,9 @@ def main():
                 continue
 
             row_sp, col_sp = map(float, ds_best.PixelSpacing)
-            px_to_mm = (row_sp + col_sp) / 2.0
 
             # distance from each original point to the mask's extracted contour
-            d_px = nearest_neighbor_distances(pts_original, pts_from_mask)
-            d_mm = d_px * px_to_mm
+            d_mm = nearest_neighbor_distances_mm(pts_original, pts_from_mask, row_sp, col_sp)
 
             patient_errors_mm.extend(d_mm.tolist())
             all_errors_mm.extend(d_mm.tolist())

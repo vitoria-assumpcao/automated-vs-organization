@@ -1,17 +1,15 @@
 from pathlib import Path
 import shutil
-import re
 import os
 from dotenv import load_dotenv
+
+from src.config import CONTOUR_FOLDER_REGEX, PATIENT_ID_TEMPLATE, contour_json_filename
 
 load_dotenv()
 
 CONTOURS_ORIGIN_FOLDER = Path(os.getenv("CONTOURS_ORIGIN_FOLDER"))
 CONTOURS_SOURCE = Path(os.getenv("CONTOURS_SOURCE"))
 CONTOUR_JSON_FILENAME = "contours.json"
-
-# Regular expression to identify T1 and T2 contour folders
-CONTOUR_PATTERN = re.compile(r"^vs_gk_(\d+)_(t1|t2)$", re.IGNORECASE)
 
 
 def organize_contours():
@@ -40,13 +38,13 @@ def organize_contours():
         if not folder.is_dir():
             continue
 
-        match = CONTOUR_PATTERN.match(folder.name)
+        match = CONTOUR_FOLDER_REGEX.match(folder.name)
         if not match:
             continue
 
         patient_number = int(match.group(1))
         modality = match.group(2).lower()
-        patient_id = f"VS-SEG-{patient_number:03d}"
+        patient_id = PATIENT_ID_TEMPLATE.format(patient_number)
 
         patient_dest = CONTOURS_SOURCE / patient_id
         patient_dest.mkdir(parents=True, exist_ok=True)
@@ -55,7 +53,7 @@ def organize_contours():
 
         if source_json.is_file():
             try:
-                destination_json = patient_dest / f"{modality}_contours.json"
+                destination_json = patient_dest / contour_json_filename(modality)
                 shutil.copy2(source_json, destination_json)
 
                 print(f"[OK] {folder.name} -> {destination_json}")

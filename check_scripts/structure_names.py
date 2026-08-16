@@ -4,6 +4,8 @@ from collections import Counter
 import os
 from dotenv import load_dotenv
 
+from src.config import STRUCTURE_NAME_KEY
+
 load_dotenv()
 
 
@@ -32,7 +34,7 @@ def list_all_structure_names():
             continue
 
         for structure in data:
-            name = structure.get("structure_name")
+            name = structure.get(STRUCTURE_NAME_KEY)
             if name:
                 structure_counter[name.strip()] += 1
 

@@ -8,20 +8,13 @@ import cv2
 import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 
+from src.config import CONTOUR_POINTS_KEY, MODALITY, STRUCTURE_NAME_KEY, TUMOR_STRUCTURE_NAMES, contour_json_filename
+
 load_dotenv()
 
 DICOM_SOURCE = Path(os.getenv("DICOM_SOURCE"))
 CONTOURS_SOURCE = Path(os.getenv("CONTOURS_SOURCE"))
 FIGURES_DIR = Path(__file__).resolve().parent.parent / "figures"
-
-TUMOR_STRUCTURE_NAMES = {
-    "tv",
-    "tumor",
-    "tumour",
-    "schwannoma",
-    "vs",
-    "vestibular schwannoma",
-}
 
 TOL_MM = 0.8
 
@@ -103,8 +96,8 @@ def load_tumor_slices(contour_json: Path):
     data = json.loads(contour_json.read_text())
     tumor_polys = []
     for s in data:
-        if is_tumor_structure(s.get("structure_name", "")):
-            tumor_polys.extend(s.get("LPS_contour_points", []))
+        if is_tumor_structure(s.get(STRUCTURE_NAME_KEY, "")):
+            tumor_polys.extend(s.get(CONTOUR_POINTS_KEY, []))
     return tumor_polys
 
 
@@ -131,12 +124,12 @@ def visualize(patient_id: str, slice_index: int = 0):
     raw DICOM, normalized PNG, projected LPS contour points, and
     the resulting binary mask from cv2.fillPoly.
     """
-    contour_json = CONTOURS_SOURCE / patient_id / "t1_contours.json"
+    contour_json = CONTOURS_SOURCE / patient_id / contour_json_filename()
     tumor_slices = load_tumor_slices(contour_json)
     if not tumor_slices:
         raise ValueError(f"No tumor contours found for {patient_id}")
 
-    t1_dir = DICOM_SOURCE / patient_id / "t1"
+    t1_dir = DICOM_SOURCE / patient_id / MODALITY
     ds_list = load_ds_list(t1_dir)
     if not ds_list:
         raise ValueError(f"No usable DICOM slices found for {patient_id}")

@@ -42,6 +42,13 @@ poetry install
 ```
 This command installs all required libraries and creates the virtual environment.
 
+### Configuration
+
+Two layers of configuration:
+
+* **`.env`** — filesystem paths (`DICOM_ORIGIN_FOLDER`, `CONTOURS_ORIGIN_FOLDER`, `DICOM_SOURCE`, `CONTOURS_SOURCE`, `BASE_DIR`, `DATASET_DIR`). See `.env.skel`.
+* **`src/config.py`** — dataset-specific conventions used across the pipeline: the patient ID pattern (`VS-SEG-###`), the source contour folder pattern (`vs_gk_<n>_<t1|t2>`), the MRI modality used by the tumor-only pipeline (`t1`), and the structure-name aliases that identify a tumor contour. Adapting the pipeline to a differently-named VS-SEG export only requires editing this file.
+
 ---
 
 ## Dataset Preparation Workflow
@@ -61,7 +68,7 @@ Paths are configured via the .env file.
 ### Step 2 — Running the pipeline
 From the root of the repository, run:
 ```bash
- python -m automated_vs_organization.pipeline
+ python -m src.pipeline
 ```
 The pipeline:
 
@@ -115,12 +122,36 @@ The alignment check script ensures that images, labels, and masks are correctly 
  cd check_scripts/
  python check_alignment.py
 ```
+After building the final train/valid/test split, `check_alignment_splits.py` re-checks that images, labels, and masks stay aligned inside each split folder:
+ ```bash
+ cd check_scripts/
+ python check_alignment_splits.py
+```
 In addition, a structure name inspection script is provided to analyze how tumor and non-tumor structures are named across all contour files:
  ```bash
  cd check_scripts/
  python structure_names.py
 ```
 This script helps identify naming variations in the original annotations and supports the definition of robust structure name matching rules during preprocessing.
+
+### Geometric validation
+
+Two scripts validate the LPS (patient coordinate system) → pixel conversion independently of the rest of the pipeline's own code:
+
+* **`validate_lps_transform.py`** — compares the pipeline's LPS-to-pixel formula against [SimpleITK](https://simpleitk.org/)'s independent implementation, which reads the same DICOM metadata but resolves the mapping with its own ITK code. Saves a few example overlay images (green = pipeline, red = SimpleITK) to `validation_visuals/`.
+* **`validate_mask_vs_coord.py`** — recomputes pixel coordinates from the source JSON contours and compares them against the mask already rasterized to disk, catching rasterization/overwrite issues the formula check alone wouldn't. Saves example overlays to `validation_visuals_mask/`.
+
+```bash
+cd check_scripts/
+python validate_lps_transform.py
+python validate_mask_vs_coord.py
+```
+
+`visualize_lps_to_pixel.py` generates a single 4-panel figure (raw DICOM, normalized PNG, projected contour, resulting mask) for one tumor slice, saved to `figures/` — useful for illustrating the conversion in documentation:
+```bash
+cd check_scripts/
+python visualize_lps_to_pixel.py
+```
 
 ---
 

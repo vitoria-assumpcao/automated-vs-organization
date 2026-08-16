@@ -2,7 +2,6 @@ from pathlib import Path
 import os
 import json
 import random
-import re
 import numpy as np
 import pydicom
 import cv2
@@ -10,14 +9,12 @@ import SimpleITK as sitk
 from tqdm import tqdm
 from dotenv import load_dotenv
 
+from src.config import CONTOUR_POINTS_KEY, MODALITY, PATIENT_ID_REGEX, STRUCTURE_NAME_KEY, TUMOR_STRUCTURE_NAMES, contour_json_filename
+
 load_dotenv()
 
 DICOM_SOURCE = Path(os.getenv("DICOM_SOURCE"))
 CONTOURS_SOURCE = Path(os.getenv("CONTOURS_SOURCE"))
-
-TUMOR_STRUCTURE_NAMES = {
-    "tv", "tumor", "tumour", "schwannoma", "vs", "vestibular schwannoma",
-}
 
 TOL_MM = 0.8
 MAX_PATIENTS = None
@@ -37,8 +34,8 @@ def has_tumor(contour_json: Path) -> bool:
     try:
         data = json.loads(contour_json.read_text())
         for s in data:
-            if is_tumor_structure(s.get("structure_name", "")) and s.get("LPS_contour_points"):
-                return len(s["LPS_contour_points"]) > 0
+            if is_tumor_structure(s.get(STRUCTURE_NAME_KEY, "")) and s.get(CONTOUR_POINTS_KEY):
+                return len(s[CONTOUR_POINTS_KEY]) > 0
     except Exception:
         pass
     return False
@@ -48,8 +45,8 @@ def load_tumor_slices(contour_json: Path):
     data = json.loads(contour_json.read_text())
     tumor_polys = []
     for s in data:
-        if is_tumor_structure(s.get("structure_name", "")):
-            tumor_polys.extend(s.get("LPS_contour_points", []))
+        if is_tumor_structure(s.get(STRUCTURE_NAME_KEY, "")):
+            tumor_polys.extend(s.get(CONTOUR_POINTS_KEY, []))
     return tumor_polys if tumor_polys else None
 
 
@@ -155,7 +152,7 @@ def save_visual_comparison(ds_best, pts_own, pts_sitk, mean_err_mm, out_path: Pa
 def main():
     patients = sorted([
         p for p in DICOM_SOURCE.iterdir()
-        if p.is_dir() and re.match(r"^VS-SEG-\d{3}$", p.name)
+        if p.is_dir() and PATIENT_ID_REGEX.match(p.name)
     ])
     random.shuffle(patients)  # no fixed seed: sample set varies on every run
     if MAX_PATIENTS:
@@ -170,7 +167,7 @@ def main():
 
     for pdir in tqdm(patients, desc="Validating LPS-to-pixel transform"):
         patient_id = pdir.name
-        contour_json = CONTOURS_SOURCE / patient_id / "t1_contours.json"
+        contour_json = CONTOURS_SOURCE / patient_id / contour_json_filename()
 
         if not has_tumor(contour_json):
             continue
@@ -178,7 +175,7 @@ def main():
         if not tumor_slices:
             continue
 
-        t1_dir = pdir / "t1"
+        t1_dir = pdir / MODALITY
         if not t1_dir.exists():
             continue
 
@@ -207,8 +204,6 @@ def main():
                 continue
 
             row_sp, col_sp = map(float, ds_best.PixelSpacing)
-            # assumes square pixels (VS-SEG: 0.4x0.4mm) to convert px -> mm
-            px_to_mm = (row_sp + col_sp) / 2.0
 
             slice_pts_own, slice_pts_sitk = [], []
 
@@ -216,8 +211,12 @@ def main():
                 x_own, y_own = own_lps_to_pixel_continuous(pt, ds_best)
                 x_sitk, y_sitk = sitk_lps_to_pixel(pt, ds_best.filename)
 
-                d_px = np.hypot(x_own - x_sitk, y_own - y_sitk)
-                d_mm = d_px * px_to_mm
+                # x is a row_dir-axis index (1/row_sp units), y is a col_dir-axis
+                # index (1/col_sp units); scale each axis before combining so
+                # this is correct for anisotropic pixel spacing too.
+                dx_mm = (x_own - x_sitk) * row_sp
+                dy_mm = (y_own - y_sitk) * col_sp
+                d_mm = np.hypot(dx_mm, dy_mm)
 
                 patient_errors_mm.append(d_mm)
                 all_errors_mm.append(d_mm)
@@ -229,7 +228,7 @@ def main():
                 stem = Path(ds_best.filename).stem
                 out_path = VISUAL_OUTPUT_DIR / f"{patient_id}_{stem}.png"
                 slice_mean_err = float(np.mean(
-                    [np.hypot(a[0] - b[0], a[1] - b[1]) * px_to_mm
+                    [np.hypot((a[0] - b[0]) * row_sp, (a[1] - b[1]) * col_sp)
                      for a, b in zip(slice_pts_own, slice_pts_sitk)]
                 ))
                 save_visual_comparison(ds_best, slice_pts_own, slice_pts_sitk,

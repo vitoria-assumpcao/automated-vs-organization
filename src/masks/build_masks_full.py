@@ -1,12 +1,13 @@
 from pathlib import Path
 import os
 import json
-import re
 import numpy as np
 import pydicom
 import cv2
 from tqdm import tqdm
 from dotenv import load_dotenv
+
+from src.config import CONTOUR_POINTS_KEY, MODALITY, PATIENT_ID_REGEX, STRUCTURE_NAME_KEY, TUMOR_STRUCTURE_NAMES, contour_json_filename
 
 load_dotenv()
 
@@ -15,15 +16,6 @@ DICOM_SOURCE = Path(os.getenv("DICOM_SOURCE"))
 CONTOURS_SOURCE = Path(os.getenv("CONTOURS_SOURCE"))
 BASE_DIR = Path(os.getenv("BASE_DIR"))
 
-
-TUMOR_STRUCTURE_NAMES = {
-    "tv",
-    "tumor",
-    "tumour",
-    "schwannoma",
-    "vs",
-    "vestibular schwannoma",
-}
 
 def is_tumor_structure(name: str) -> bool:
     name = name.lower()
@@ -98,8 +90,8 @@ def load_tumor_polys(json_path: Path):
     polys = []
 
     for s in data:
-        if is_tumor_structure(s.get("structure_name", "")):
-            polys.extend(s.get("LPS_contour_points", []))
+        if is_tumor_structure(s.get(STRUCTURE_NAME_KEY, "")):
+            polys.extend(s.get(CONTOUR_POINTS_KEY, []))
 
     return polys
 
@@ -110,17 +102,17 @@ def main():
 
     patients = sorted(
         p for p in DICOM_SOURCE.iterdir()
-        if p.is_dir() and re.match(r"^VS-SEG-\d{3}$", p.name)
+        if p.is_dir() and PATIENT_ID_REGEX.match(p.name)
     )
 
     for pdir in tqdm(patients, desc="Generating full masks"):
         patient_id = pdir.name
 
-        t1_dir = pdir / "t1"            # Imaging modality used for processing (change to "t2" if needed)
+        t1_dir = pdir / MODALITY
         if not t1_dir.exists():
             continue
 
-        contour_json = CONTOURS_SOURCE / patient_id / "t1_contours.json"
+        contour_json = CONTOURS_SOURCE / patient_id / contour_json_filename()
         tumor_polys = load_tumor_polys(contour_json)
 
         ds_list = []

@@ -4,6 +4,8 @@ import re
 import os
 from dotenv import load_dotenv
 
+from src.config import PATIENT_ID_REGEX
+
 load_dotenv()
 
 
@@ -49,7 +51,7 @@ def organize_dicom():
         return
 
     DICOM_SOURCE.mkdir(parents=True, exist_ok=True)
-    standard_patient = re.compile(r"^VS-SEG-\d{3}$", re.IGNORECASE)
+    standard_patient = PATIENT_ID_REGEX
 
     patients = sorted([
         p for p in DICOM_ORIGIN_FOLDER.iterdir()
