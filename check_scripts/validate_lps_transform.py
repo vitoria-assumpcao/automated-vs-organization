@@ -9,14 +9,13 @@ import SimpleITK as sitk
 from tqdm import tqdm
 from dotenv import load_dotenv
 
-from src.config import CONTOUR_POINTS_KEY, MODALITY, PATIENT_ID_REGEX, STRUCTURE_NAME_KEY, TUMOR_STRUCTURE_NAMES, contour_json_filename
+from src.config import CONTOUR_POINTS_KEY, MODALITY, PATIENT_ID_REGEX, STRUCTURE_NAME_KEY, TOL_MM, TUMOR_STRUCTURE_NAMES, contour_json_filename
 
 load_dotenv()
 
 DICOM_SOURCE = Path(os.getenv("DICOM_SOURCE"))
 CONTOURS_SOURCE = Path(os.getenv("CONTOURS_SOURCE"))
 
-TOL_MM = 0.8
 MAX_PATIENTS = None
 SAVE_VISUAL_SAMPLES = True
 VISUAL_SAMPLE_COUNT = 6          # how many sample slices to save, one per patient

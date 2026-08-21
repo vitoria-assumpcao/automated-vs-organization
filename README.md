@@ -47,7 +47,7 @@ This command installs all required libraries and creates the virtual environment
 Two layers of configuration:
 
 * **`.env`** — filesystem paths (`DICOM_ORIGIN_FOLDER`, `CONTOURS_ORIGIN_FOLDER`, `DICOM_SOURCE`, `CONTOURS_SOURCE`, `BASE_DIR`, `DATASET_DIR`). See `.env.skel`.
-* **`src/config.py`** — dataset-specific conventions used across the pipeline: the patient ID pattern (`VS-SEG-###`), the source contour folder pattern (`vs_gk_<n>_<t1|t2>`), the MRI modality used by the tumor-only pipeline (`t1`), and the structure-name aliases that identify a tumor contour. Adapting the pipeline to a differently-named VS-SEG export only requires editing this file.
+* **`src/config.py`** — dataset-specific conventions used across the pipeline: the patient ID pattern (`VS-SEG-###`), the source contour folder pattern (`vs_gk_<n>_<t1|t2>`), the MRI modality used by the tumor-only pipeline (`t1`), the structure-name aliases that identify a tumor contour, and the slice-plane matching tolerance (`TOL_MM`, mm). Adapting the pipeline to a differently-named VS-SEG export, or to a dataset with different slice spacing, only requires editing this file.
 
 ---
 

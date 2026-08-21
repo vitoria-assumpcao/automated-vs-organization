@@ -8,7 +8,7 @@ import cv2
 from tqdm import tqdm
 from dotenv import load_dotenv
 
-from src.config import CONTOUR_POINTS_KEY, MODALITY, PATIENT_ID_REGEX, STRUCTURE_NAME_KEY, TUMOR_STRUCTURE_NAMES, contour_json_filename
+from src.config import CONTOUR_POINTS_KEY, MODALITY, PATIENT_ID_REGEX, STRUCTURE_NAME_KEY, TOL_MM, TUMOR_STRUCTURE_NAMES, contour_json_filename
 
 load_dotenv()
 
@@ -17,7 +17,6 @@ CONTOURS_SOURCE = Path(os.getenv("CONTOURS_SOURCE"))
 BASE_DIR = Path(os.getenv("BASE_DIR"))
 MASKS_DIR = BASE_DIR / "masks"
 
-TOL_MM = 0.8
 MAX_PATIENTS = None
 
 SAVE_VISUAL_SAMPLES = True

@@ -8,7 +8,7 @@ import cv2
 from tqdm import tqdm
 from dotenv import load_dotenv
 
-from src.config import CONTOUR_POINTS_KEY, MODALITY, PATIENT_ID_REGEX, STRUCTURE_NAME_KEY, TUMOR_STRUCTURE_NAMES, contour_json_filename
+from src.config import CONTOUR_POINTS_KEY, MODALITY, PATIENT_ID_REGEX, STRUCTURE_NAME_KEY, TOL_MM, TUMOR_STRUCTURE_NAMES, contour_json_filename
 
 load_dotenv()
 
@@ -20,8 +20,6 @@ BASE_DIR = Path(os.getenv("BASE_DIR"))
 def is_tumor_structure(name: str) -> bool:
     name = name.lower()
     return any(keyword in name for keyword in TUMOR_STRUCTURE_NAMES)
-
-TOL_MM = 0.8
 
 
 def load_dicom_uint8(ds: pydicom.Dataset):

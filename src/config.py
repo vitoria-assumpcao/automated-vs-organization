@@ -14,6 +14,11 @@ CONTOUR_FOLDER_REGEX = re.compile(r"^vs_gk_(\d+)_(t1|t2)$", re.IGNORECASE)
 # contour JSON filename are both derived from this.
 MODALITY = "t1"
 
+# Max distance (mm) between a contour's plane and a slice's plane for the
+# two to be considered a match. Depends on the dataset's slice spacing --
+# increase proportionally for datasets with coarser spacing than VS-SEG's.
+TOL_MM = 0.8
+
 
 def contour_json_filename(modality: str = MODALITY) -> str:
     return f"{modality}_contours.json"
@@ -27,6 +32,6 @@ TUMOR_STRUCTURE_NAMES = {
 
 # Keys in each entry of the contour JSON (a per-structure, per-slice LPS
 # polygon list -- this repo's JSON mirror of a DICOM RTSTRUCT's
-# ROIContourSequence, not a schema of its own invention).
+# ROIContourSequence).
 STRUCTURE_NAME_KEY = "structure_name"
 CONTOUR_POINTS_KEY = "LPS_contour_points"

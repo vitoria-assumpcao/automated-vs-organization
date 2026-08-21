@@ -8,15 +8,13 @@ import cv2
 import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 
-from src.config import CONTOUR_POINTS_KEY, MODALITY, STRUCTURE_NAME_KEY, TUMOR_STRUCTURE_NAMES, contour_json_filename
+from src.config import CONTOUR_POINTS_KEY, MODALITY, STRUCTURE_NAME_KEY, TOL_MM, TUMOR_STRUCTURE_NAMES, contour_json_filename
 
 load_dotenv()
 
 DICOM_SOURCE = Path(os.getenv("DICOM_SOURCE"))
 CONTOURS_SOURCE = Path(os.getenv("CONTOURS_SOURCE"))
 FIGURES_DIR = Path(__file__).resolve().parent.parent / "figures"
-
-TOL_MM = 0.8
 
 
 def is_tumor_structure(name: str) -> bool:
