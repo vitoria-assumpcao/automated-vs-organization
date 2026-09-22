@@ -25,8 +25,8 @@ def load_dicom_uint8(ds):
     arr = ds.pixel_array
     try:
         arr = apply_voi_lut(arr, ds)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"WARNING: VOI LUT failed for {getattr(ds, 'filename', ds)}: {e}")
 
     arr = arr.astype(np.float32)
     if getattr(ds, "PhotometricInterpretation", "") == "MONOCHROME1":
@@ -101,6 +101,8 @@ def main():
         p for p in DICOM_SOURCE.iterdir()
         if p.is_dir() and PATIENT_ID_REGEX.match(p.name)
     )
+    n_no_slice_match = 0
+    n_out_of_bounds = 0
 
     for pdir in tqdm(patients, desc="Generating full dataset"):
         pid = pdir.name
@@ -121,8 +123,8 @@ def main():
                 if all(k in ds for k in ("ImagePositionPatient", "ImageOrientationPatient", "PixelSpacing")):
                     ds.filename = str(dcm)
                     ds_list.append(ds)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"WARNING: failed to read DICOM {dcm}: {e}")
 
         if not ds_list:
             continue
@@ -132,6 +134,8 @@ def main():
             ds = pick_slice(ds_list, poly)
             if ds:
                 poly_to_slice.setdefault(ds.filename, []).append(poly)
+            else:
+                n_no_slice_match += 1
 
         out_img = BASE_DIR / "images" / pid
         out_lbl_seg = BASE_DIR / "labels" / pid
@@ -157,6 +161,7 @@ def main():
             for poly in poly_to_slice.get(ds.filename, []):
                 pts = lps_to_pixels(poly, ds)
                 if pts is None:
+                    n_out_of_bounds += 1
                     continue
 
                 x, y, ww, hh = cv2.boundingRect(pts)
@@ -180,6 +185,10 @@ def main():
     print("Full dataset (images + labels) generated.")
     print(f"  Segmentation labels : {BASE_DIR / 'labels'}")
     print(f"  Detection labels    : {BASE_DIR / 'labels_detect'}")
+    if n_no_slice_match:
+        print(f"WARNING: {n_no_slice_match} contour(s) skipped -- no matching DICOM slice within {TOL_MM}mm")
+    if n_out_of_bounds:
+        print(f"WARNING: {n_out_of_bounds} contour(s) skipped -- fewer than 3 points fell inside the image bounds")
 
 
 if __name__ == "__main__":

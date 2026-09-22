@@ -37,8 +37,8 @@ def load_dicom_uint8(ds: pydicom.Dataset):
 
     try:
         arr = apply_voi_lut(arr, ds)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"WARNING: VOI LUT failed for {getattr(ds, 'filename', ds)}: {e}")
 
     arr = arr.astype(np.float32)
 
@@ -104,8 +104,8 @@ def has_tumor(contour_path: Path) -> bool:
             if (is_tumor_structure(s.get(STRUCTURE_NAME_KEY, "")) and
                 s.get(CONTOUR_POINTS_KEY)):
                 return len(s[CONTOUR_POINTS_KEY]) > 0
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"WARNING: failed to parse {contour_path}: {e}")
 
     return False
 
@@ -179,6 +179,8 @@ def main():
     print(f"Patients found in DICOM directory: {len(patients)}")
 
     total_png, total_label_files = 0, 0
+    n_no_slice_match = 0
+    n_out_of_bounds = 0
 
     for pdir in tqdm(patients, desc="Processing patients"):
         patient_id = pdir.name
@@ -206,8 +208,8 @@ def main():
                     'PixelSpacing' in ds):
                     ds.filename = str(dcm)
                     ds_list.append(ds)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"WARNING: failed to read DICOM {dcm}: {e}")
 
         if not ds_list:
             continue
@@ -225,6 +227,7 @@ def main():
 
             ds_best = pick_nearest_slice(ds_list, poly_lps, tol_mm=TOL_MM)
             if ds_best is None:
+                n_no_slice_match += 1
                 continue
 
             img = load_dicom_uint8(ds_best)
@@ -233,6 +236,7 @@ def main():
 
             pts_px = lps_to_pixels(poly_lps, ds_best)
             if pts_px is None:
+                n_out_of_bounds += 1
                 continue
 
             dcm_stem = Path(ds_best.filename).stem
@@ -279,6 +283,10 @@ def main():
     print(f"Images directory         : {BASE_DIR / 'images'}")
     print(f"Segmentation labels      : {BASE_DIR / 'labels'}")
     print(f"Detection labels         : {BASE_DIR / 'labels_detect'}")
+    if n_no_slice_match:
+        print(f"WARNING: {n_no_slice_match} contour(s) skipped -- no matching DICOM slice within {TOL_MM}mm")
+    if n_out_of_bounds:
+        print(f"WARNING: {n_out_of_bounds} contour(s) skipped -- fewer than 3 points fell inside the image bounds")
 
 
 if __name__ == "__main__":

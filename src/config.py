@@ -28,6 +28,7 @@ def contour_json_filename(modality: str = MODALITY) -> str:
 # source JSON.
 TUMOR_STRUCTURE_NAMES = {
     "tv", "tumor", "tumour", "schwannoma", "vs", "vestibular schwannoma",
+    "an", "acoustic neuroma",
 }
 
 # Keys in each entry of the contour JSON (a per-structure, per-slice LPS

@@ -35,8 +35,8 @@ def has_tumor(contour_json: Path) -> bool:
         for s in data:
             if is_tumor_structure(s.get(STRUCTURE_NAME_KEY, "")) and s.get(CONTOUR_POINTS_KEY):
                 return len(s[CONTOUR_POINTS_KEY]) > 0
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"WARNING: failed to parse {contour_json}: {e}")
     return False
 
 
@@ -163,6 +163,7 @@ def main():
     per_patient_summary = []
     visuals_saved = 0
     patients_with_visual = set()
+    n_no_slice_match = 0
 
     for pdir in tqdm(patients, desc="Validating LPS-to-pixel transform"):
         patient_id = pdir.name
@@ -187,8 +188,8 @@ def main():
                 if all(k in ds for k in ("ImagePositionPatient", "ImageOrientationPatient", "PixelSpacing")):
                     ds.filename = str(dcm)
                     ds_list.append(ds)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"WARNING: failed to read DICOM {dcm}: {e}")
         if not ds_list:
             continue
 
@@ -200,6 +201,7 @@ def main():
 
             ds_best = pick_nearest_slice(ds_list, poly_lps, TOL_MM)
             if ds_best is None:
+                n_no_slice_match += 1
                 continue
 
             row_sp, col_sp = map(float, ds_best.PixelSpacing)
@@ -240,12 +242,13 @@ def main():
                 patient_id,
                 len(patient_errors_mm),
                 float(np.mean(patient_errors_mm)),
+                float(np.std(patient_errors_mm)),
                 float(np.max(patient_errors_mm)),
             ))
 
     print("\n--- Per-patient results (mm) ---")
-    for pid, n, mean_e, max_e in per_patient_summary:
-        print(f"{pid}: n_points={n:5d}  mean_err={mean_e:.4e} mm  max_err={max_e:.4e} mm")
+    for pid, n, mean_e, std_e, max_e in per_patient_summary:
+        print(f"{pid}: n_points={n:5d}  mean_err={mean_e:.4e} mm  std_err={std_e:.4e} mm  max_err={max_e:.4e} mm")
 
     if all_errors_mm:
         arr = np.array(all_errors_mm)
@@ -257,6 +260,9 @@ def main():
         print(f"Median error             : {np.median(arr):.4e} mm")
     else:
         print("No points compared -- check DICOM_SOURCE/CONTOURS_SOURCE in .env.")
+
+    if n_no_slice_match:
+        print(f"WARNING: {n_no_slice_match} contour(s) skipped -- no matching DICOM slice within {TOL_MM}mm")
 
 
 if __name__ == "__main__":

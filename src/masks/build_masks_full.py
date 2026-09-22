@@ -102,6 +102,8 @@ def main():
         p for p in DICOM_SOURCE.iterdir()
         if p.is_dir() and PATIENT_ID_REGEX.match(p.name)
     )
+    n_no_slice_match = 0
+    n_out_of_bounds = 0
 
     for pdir in tqdm(patients, desc="Generating full masks"):
         patient_id = pdir.name
@@ -124,8 +126,8 @@ def main():
                                          "PixelSpacing")):
                     ds.filename = str(dcm)
                     ds_list.append(ds)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"WARNING: failed to read DICOM {dcm}: {e}")
 
         if not ds_list:
             continue
@@ -135,6 +137,8 @@ def main():
             ds = pick_nearest_slice(ds_list, poly)
             if ds:
                 poly_map.setdefault(ds.filename, []).append(poly)
+            else:
+                n_no_slice_match += 1
 
         out_dir = BASE_DIR / "masks" / patient_id
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -146,11 +150,17 @@ def main():
                 pts = lps_to_pixels(poly, ds)
                 if pts is not None:
                     cv2.fillPoly(mask, [pts], 255)
+                else:
+                    n_out_of_bounds += 1
 
             stem = Path(ds.filename).stem
             cv2.imwrite(str(out_dir / f"{stem}.png"), mask)
 
     print("Full mask dataset generated.")
+    if n_no_slice_match:
+        print(f"WARNING: {n_no_slice_match} contour(s) skipped -- no matching DICOM slice within {TOL_MM}mm")
+    if n_out_of_bounds:
+        print(f"WARNING: {n_out_of_bounds} contour(s) skipped -- fewer than 3 points fell inside the image bounds")
 
 
 if __name__ == "__main__":

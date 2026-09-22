@@ -26,8 +26,8 @@ def load_dicom_uint8(ds: pydicom.Dataset):
     arr = ds.pixel_array
     try:
         arr = apply_voi_lut(arr, ds)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"WARNING: VOI LUT failed for {getattr(ds, 'filename', ds)}: {e}")
 
     arr = arr.astype(np.float32)
     if getattr(ds, "PhotometricInterpretation", "") == "MONOCHROME1":
@@ -111,8 +111,8 @@ def load_ds_list(t1_dir: Path):
                                      "PixelSpacing")):
                 ds.filename = str(dcm)
                 ds_list.append(ds)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"WARNING: failed to read DICOM {dcm}: {e}")
     return ds_list
 
 

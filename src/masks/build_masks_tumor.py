@@ -88,8 +88,8 @@ def has_tumor(contour_json: Path) -> bool:
             if (is_tumor_structure(s.get(STRUCTURE_NAME_KEY, "")) and
                 s.get(CONTOUR_POINTS_KEY)):
                 return len(s[CONTOUR_POINTS_KEY]) > 0
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"WARNING: failed to parse {contour_json}: {e}")
 
     return False
 
@@ -116,6 +116,8 @@ def main():
 
     print(f"Patients found: {len(patients)}")
     total_masks = 0
+    n_no_slice_match = 0
+    n_out_of_bounds = 0
 
     for pdir in tqdm(patients, desc="Generating masks"):
         patient_id = pdir.name
@@ -143,8 +145,8 @@ def main():
                                          "PixelSpacing")):
                     ds.filename = str(dcm)
                     ds_list.append(ds)
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"WARNING: failed to read DICOM {dcm}: {e}")
 
         if not ds_list:
             continue
@@ -160,6 +162,7 @@ def main():
 
             ds_best = pick_nearest_slice(ds_list, poly_lps, TOL_MM)
             if ds_best is None:
+                n_no_slice_match += 1
                 continue
 
             poly_map.setdefault(ds_best.filename, []).append(poly_lps)
@@ -172,6 +175,8 @@ def main():
                 pts = lps_to_pixels(poly_lps, ds_best)
                 if pts is not None:
                     cv2.fillPoly(mask, [pts], 255)
+                else:
+                    n_out_of_bounds += 1
 
             stem = Path(ds_best.filename).stem
             cv2.imwrite(str(out_dir / f"{stem}.png"), mask)
@@ -179,6 +184,10 @@ def main():
 
     print(f"\nMasks saved to {BASE_DIR / 'masks'}")
     print(f"Total masks generated: {total_masks}")
+    if n_no_slice_match:
+        print(f"WARNING: {n_no_slice_match} contour(s) skipped -- no matching DICOM slice within {TOL_MM}mm")
+    if n_out_of_bounds:
+        print(f"WARNING: {n_out_of_bounds} contour(s) skipped -- fewer than 3 points fell inside the image bounds")
 
 
 if __name__ == "__main__":
